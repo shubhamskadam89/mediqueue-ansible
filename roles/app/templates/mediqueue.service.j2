@@ -1,0 +1,16 @@
+# Managed by Ansible - do not edit manually
+[Unit]
+Description={{ app_name }} appointment service (Gunicorn)
+After=network.target postgresql.service
+
+[Service]
+User={{ app_user }}
+Group={{ app_user }}
+WorkingDirectory={{ app_dir }}
+EnvironmentFile={{ app_dir }}/.env
+ExecStart={{ app_dir }}/venv/bin/gunicorn --workers {{ gunicorn_workers }} --bind {{ app_bind_host }}:{{ app_port }} --access-logfile - app:app
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

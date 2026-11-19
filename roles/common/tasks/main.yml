@@ -1,0 +1,59 @@
+---
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Install base packages
+  ansible.builtin.apt:
+    name: "{{ base_packages }}"
+    state: present
+
+- name: Set the server timezone
+  community.general.timezone:
+    name: "{{ server_timezone }}"
+
+- name: Create the application system user
+  ansible.builtin.user:
+    name: "{{ app_user }}"
+    system: true
+    shell: /usr/sbin/nologin
+    home: "{{ app_dir }}"
+    create_home: false
+
+- name: Allow SSH through the firewall (before enabling it)
+  community.general.ufw:
+    rule: allow
+    port: "22"
+    proto: tcp
+  when: firewall_enabled | bool
+
+- name: Allow HTTP on web servers
+  community.general.ufw:
+    rule: allow
+    port: "{{ nginx_listen_port }}"
+    proto: tcp
+  when: firewall_enabled | bool and inventory_hostname in groups['web']
+
+- name: Allow Gunicorn port on app servers from the VPC (multi-node only)
+  community.general.ufw:
+    rule: allow
+    port: "{{ app_port }}"
+    proto: tcp
+    from_ip: "{{ db_allowed_cidr }}"
+  when: firewall_enabled | bool and db_allowed_cidr | length > 0 and inventory_hostname in groups['app']
+
+- name: Allow PostgreSQL on DB servers from the VPC (multi-node only)
+  community.general.ufw:
+    rule: allow
+    port: "{{ db_port }}"
+    proto: tcp
+    from_ip: "{{ db_allowed_cidr }}"
+  when: firewall_enabled | bool and db_allowed_cidr | length > 0 and inventory_hostname in groups['db']
+
+- name: Enable the firewall with default deny for incoming traffic
+  community.general.ufw:
+    state: enabled
+    policy: deny
+    direction: incoming
+  when: firewall_enabled | bool

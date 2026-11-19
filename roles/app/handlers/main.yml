@@ -1,0 +1,6 @@
+---
+- name: Restart mediqueue
+  ansible.builtin.systemd:
+    name: mediqueue
+    state: restarted
+    daemon_reload: true

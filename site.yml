@@ -1,0 +1,61 @@
+---
+# =====================================================================
+# MediQueue - Hospital Appointment Booking System
+# Configuration management playbook (role based, 3-tier)
+#
+#   Syntax check : ansible-playbook site.yml --syntax-check
+#   Dry run      : ansible-playbook site.yml --check --diff
+#   Full deploy  : ansible-playbook site.yml
+#   One tier     : ansible-playbook site.yml --tags db   (common|db|app|web|verify)
+# =====================================================================
+
+- name: Play 1 - Baseline configuration for every server
+  hosts: mediqueue
+  become: true
+  roles:
+    - role: common
+      tags: [common]
+
+- name: Play 2 - Database tier (PostgreSQL)
+  hosts: db
+  become: true
+  roles:
+    - role: postgres
+      tags: [db]
+
+- name: Play 3 - Application tier (Flask + Gunicorn)
+  hosts: app
+  become: true
+  roles:
+    - role: app
+      tags: [app]
+
+- name: Play 4 - Web tier (Nginx reverse proxy)
+  hosts: web
+  become: true
+  roles:
+    - role: nginx
+      tags: [web]
+
+- name: Play 5 - Smoke test the deployment
+  hosts: web
+  become: false
+  gather_facts: false
+  tags: [verify]
+  tasks:
+    - name: Call the /health endpoint through Nginx
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ nginx_listen_port }}/health"
+        return_content: true
+      register: health
+      retries: 5
+      delay: 3
+      until: health.status == 200
+
+    - name: Assert the app and database are healthy
+      ansible.builtin.assert:
+        that:
+          - health.json.status == "UP"
+          - health.json.database == "connected"
+        success_msg: "{{ app_name }} v{{ app_version }} is UP and connected to PostgreSQL"
+        fail_msg: "Health check failed: {{ health.content }}"

@@ -1,0 +1,60 @@
+---
+- name: Install PostgreSQL and the Python driver Ansible needs
+  ansible.builtin.apt:
+    name:
+      - postgresql
+      - postgresql-contrib
+      - python3-psycopg2
+    state: present
+
+- name: Ensure PostgreSQL is enabled and running
+  ansible.builtin.service:
+    name: postgresql
+    state: started
+    enabled: true
+
+- name: Find the installed PostgreSQL config directory
+  ansible.builtin.find:
+    paths: /etc/postgresql
+    file_type: directory
+    depth: 2
+    patterns: main
+    recurse: true
+  register: postgres_conf_search
+
+- name: Remember the config directory path
+  ansible.builtin.set_fact:
+    postgres_conf_dir: "{{ postgres_conf_search.files[0].path }}"
+
+- name: Listen on all interfaces (multi-node only)
+  ansible.builtin.lineinfile:
+    path: "{{ postgres_conf_dir }}/postgresql.conf"
+    regexp: "^#?listen_addresses"
+    line: "listen_addresses = '*'"
+  when: db_allowed_cidr | length > 0
+  notify: Restart postgresql
+
+- name: Allow the app user from the VPC CIDR (multi-node only)
+  ansible.builtin.lineinfile:
+    path: "{{ postgres_conf_dir }}/pg_hba.conf"
+    line: "host  {{ db_name }}  {{ db_user }}  {{ db_allowed_cidr }}  scram-sha-256"
+  when: db_allowed_cidr | length > 0
+  notify: Restart postgresql
+
+- name: Create the application database user
+  community.postgresql.postgresql_user:
+    name: "{{ db_user }}"
+    password: "{{ db_password }}"
+    state: present
+  become: true
+  become_user: postgres
+  no_log: true
+
+- name: Create the application database
+  community.postgresql.postgresql_db:
+    name: "{{ db_name }}"
+    owner: "{{ db_user }}"
+    encoding: UTF8
+    state: present
+  become: true
+  become_user: postgres

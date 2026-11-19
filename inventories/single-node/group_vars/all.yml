@@ -1,0 +1,6 @@
+---
+# Everything runs on one machine, so the app talks to PostgreSQL on loopback
+db_host: 127.0.0.1
+app_bind_host: 127.0.0.1
+# No remote DB clients in single-node mode
+db_allowed_cidr: ""

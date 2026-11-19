@@ -1,0 +1,35 @@
+---
+- name: Install Nginx
+  ansible.builtin.apt:
+    name: nginx
+    state: present
+
+- name: Deploy the MediQueue reverse-proxy site
+  ansible.builtin.template:
+    src: mediqueue.conf.j2
+    dest: /etc/nginx/sites-available/mediqueue
+    mode: "0644"
+  notify: Reload nginx
+
+- name: Enable the MediQueue site
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/mediqueue
+    dest: /etc/nginx/sites-enabled/mediqueue
+    state: link
+  notify: Reload nginx
+
+- name: Disable the default Nginx site
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: Reload nginx
+
+- name: Validate the Nginx configuration
+  ansible.builtin.command: nginx -t
+  changed_when: false
+
+- name: Ensure Nginx is enabled and running
+  ansible.builtin.service:
+    name: nginx
+    state: started
+    enabled: true

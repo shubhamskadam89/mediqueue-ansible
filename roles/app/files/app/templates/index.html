@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ app_name }} - Appointments</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #eef4f7; margin: 0; color: #1d2b36; }
+    header { background: #0b6e6e; color: #fff; padding: 18px 24px; }
+    header h1 { margin: 0; font-size: 24px; }
+    header p { margin: 4px 0 0; opacity: .85; font-size: 14px; }
+    main { max-width: 860px; margin: 24px auto; padding: 0 16px; display: grid; gap: 20px; }
+    .card { background: #fff; border-radius: 10px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+    form { display: grid; grid-template-columns: 2fr 2fr 1.4fr auto; gap: 10px; }
+    input, select, button { padding: 9px; border: 1px solid #c5d3da; border-radius: 6px; font-size: 14px; }
+    button { background: #0b6e6e; color: #fff; border: 0; cursor: pointer; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { text-align: left; padding: 8px; border-bottom: 1px solid #e3eaee; }
+    footer { text-align: center; font-size: 12px; color: #5c6f7b; margin-bottom: 24px; }
+    @media (max-width: 640px) { form { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>{{ app_name }} &mdash; Hospital Appointment Booking</h1>
+    <p>Version {{ version }} &middot; Environment: {{ env }} &middot; Served by: {{ host }}</p>
+  </header>
+  <main>
+    <section class="card">
+      <h2>Book an appointment</h2>
+      <form method="post" action="/book">
+        <input name="patient" placeholder="Patient name" required>
+        <select name="department">
+          {% for d in departments %}<option>{{ d }}</option>{% endfor %}
+        </select>
+        <input type="date" name="slot" required>
+        <button type="submit">Book</button>
+      </form>
+    </section>
+    <section class="card">
+      <h2>Upcoming appointments ({{ appointments|length }})</h2>
+      <table>
+        <tr><th>#</th><th>Patient</th><th>Department</th><th>Date</th></tr>
+        {% for a in appointments %}
+        <tr><td>{{ a.id }}</td><td>{{ a.patient }}</td><td>{{ a.department }}</td><td>{{ a.slot }}</td></tr>
+        {% else %}
+        <tr><td colspan="4">No appointments yet.</td></tr>
+        {% endfor %}
+      </table>
+    </section>
+  </main>
+  <footer>Deployed with Ansible &middot; Nginx &rarr; Gunicorn/Flask &rarr; PostgreSQL</footer>
+</body>
+</html>

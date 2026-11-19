@@ -1,0 +1,7 @@
+---
+# App servers reach the DB server over the VPC private network
+db_host: "{{ hostvars[groups['db'][0]]['ansible_host'] }}"
+# Gunicorn must listen on the private interface so Nginx (on web01) can reach it
+app_bind_host: 0.0.0.0
+# PostgreSQL accepts connections only from inside the VPC
+db_allowed_cidr: 172.31.0.0/16
